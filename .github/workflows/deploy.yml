@@ -1,32 +1,49 @@
-name: Build und Test
+name: Deploy auf GitHub Pages
 
-# Der Workflow startet jedes Mal, wenn du etwas in den 'main' Branch pushst
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
+
+# Erlaubt GitHub Actions, die Webseite auf GitHub Pages hochzuladen
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Code von GitHub auschecken
       - name: Code auschecken
         uses: actions/checkout@v4
 
-      # 2. Node.js installieren (wichtig für Vite/Tailwind)
       - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
 
-      # 3. Abhängigkeiten (node_modules) installieren
       - name: Abhängigkeiten installieren
         run: npm ci
 
-      # 4. Das Projekt bauen (erstellt den 'dist' Ordner)
       - name: Projekt bauen
         run: npm run build
+
+      # NEU: Den gebauten 'dist'-Ordner für GitHub Pages vorbereiten
+      - name: Build-Ordner hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./dist"
+
+      # NEU: Die Webseite im Internet veröffentlichen
+      - name: Auf GitHub Pages veröffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
